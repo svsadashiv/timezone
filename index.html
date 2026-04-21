@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Time Zone Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f5f5f3;
+    --bg-tertiary: #efefec;
+    --text-primary: #1a1a18;
+    --text-secondary: #6b6b66;
+    --text-tertiary: #a0a09a;
+    --border: rgba(0,0,0,0.12);
+    --border-hover: rgba(0,0,0,0.25);
+    --accent: #378ADD;
+    --ahead: #1D9E75;
+    --behind: #D85A30;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .container {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+  }
+  .app-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+  }
+  .utc-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 5px 12px;
+    white-space: nowrap;
+  }
+
+  /* ── Search row ── */
+  .search-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1rem;
+    position: relative;
+  }
+  .search-wrap {
+    flex: 1;
+    position: relative;
+  }
+  .search-icon {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+    font-size: 15px;
+    pointer-events: none;
+    line-height: 1;
+  }
+  .search-input {
+    width: 100%;
+    padding: 9px 12px 9px 34px;
+    font-size: 14px;
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--border-hover); }
+  .search-input::placeholder { color: var(--text-tertiary); }
+
+  .dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: var(--bg);
+    border: 0.5px solid var(--border-hover);
+    border-radius: var(--radius-lg);
+    z-index: 200;
+    max-height: 240px;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  .dropdown.open { display: block; }
+  .dd-item {
+    padding: 9px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .dd-item:last-child { border-bottom: none; }
+  .dd-item:hover { background: var(--bg-secondary); }
+  .dd-flag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 18px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+  }
+  .dd-left { display: flex; align-items: center; gap: 8px; }
+  .dd-name { font-weight: 500; }
+  .dd-sub { color: var(--text-secondary); font-size: 12px; }
+  .dd-offset {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  /* ── Format toggle ── */
+  .fmt-toggle {
+    display: flex;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .fmt-btn {
+    padding: 9px 14px;
+    font-size: 13px;
+    font-family: 'Sora', sans-serif;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: background 0.1s, color 0.1s;
+  }
+  .fmt-btn.active {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  /* ── Quick chips ── */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 1.25rem;
+  }
+  .chip {
+    font-size: 12px;
+    padding: 5px 11px;
+    border: 0.5px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    background: transparent;
+    font-family: 'Sora', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.1s, border-color 0.1s;
+  }
+  .chip:hover { background: var(--bg-secondary); border-color: var(--border-hover); }
+  .chip-code {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  /* ── Zone cards ── */
+  .zones-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 2rem; }
+
+  .zone-card {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.15s;
+  }
+  .zone-card:hover { border-color: var(--border-hover); }
+  .zone-card.reference { border-color: var(--accent); border-width: 1px; }
+
+  .zone-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 24px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+    letter-spacing: 0.04em;
+  }
+
+  .zone-info { flex: 1; min-width: 0; }
+  .zone-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .zone-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .zone-right { text-align: right; flex-shrink: 0; }
+  .zone-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+  }
+  .zone-date {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    font-family: 'DM Mono', monospace;
+  }
+  .zone-diff {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 1px;
+  }
+  .zone-diff.ahead { color: var(--ahead); }
+  .zone-diff.behind { color: var(--behind); }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-tertiary);
+    font-size: 18px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    line-height: 1;
+    transition: background 0.1s, color 0.1s;
+  }
+  .remove-btn:hover { color: var(--text-secondary); background: var(--bg-secondary); }
+
+  .empty-state {
+    text-align: center;
+    padding: 2.5rem;
+    color: var(--text-secondary);
+    font-size: 13px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 0.5px dashed var(--border-hover);
+  }
+  .empty-state strong { display: block; font-size: 15px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
+
+  /* ── Divider ── */
+  .divider { height: 0.5px; background: var(--border); margin: 0 0 1.75rem; }
+
+  /* ── Converter section ── */
+  .conv-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 1rem;
+  }
+  .conv-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .conv-input {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    padding: 9px 12px;
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    outline: none;
+    width: 140px;
+    transition: border-color 0.15s;
+  }
+  .conv-input:focus { border-color: var(--border-hover); }
+  .conv-label { font-size: 13px; color: var(--text-secondary); flex-shrink: 0; }
+  .conv-select {
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    padding: 9px 10px;
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    outline: none;
+    min-width: 170px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .conv-select:focus { border-color: var(--border-hover); }
+
+  .conv-results { margin-top: 1rem; display: flex; flex-direction: column; gap: 6px; }
+  .conv-result-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 14px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border);
+  }
+  .conv-result-left { display: flex; align-items: center; gap: 8px; }
+  .conv-result-name { font-size: 13px; color: var(--text-secondary); }
+  .conv-result-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="app-title">Time Zone Converter</div>
+    <div class="utc-badge" id="utcBadge">UTC &middot; 00:00:00</div>
+  </div>
+
+  <!-- Search -->
+  <div class="search-row">
+    <div class="search-wrap">
+      <span class="search-icon">&#9906;</span>
+      <input class="search-input" id="searchInput" placeholder="Search city or time zone&hellip;" autocomplete="off" spellcheck="false" />
+      <div class="dropdown" id="dropdown"></div>
+    </div>
+    <div class="fmt-toggle">
+      <button class="fmt-btn active" id="btn12" onclick="setFmt(12)">12h</button>
+      <button class="fmt-btn" id="btn24" onclick="setFmt(24)">24h</button>
+    </div>
+  </div>
+
+  <!-- Quick chips -->
+  <div class="chips" id="quickChips"></div>
+
+  <!-- Zone cards -->
+  <div class="zones-list" id="zonesList"></div>
+
+  <div class="divider"></div>
+
+  <!-- Converter -->
+  <div class="conv-title">Convert a specific time</div>
+  <div class="conv-row">
+    <input class="conv-input" type="time" id="convTime" value="09:00" />
+    <span class="conv-label">in</span>
+    <select class="conv-select" id="convFrom"></select>
+    <span class="conv-label">&#8594;</span>
+  </div>
+  <div class="conv-results" id="convResults"></div>
+
+</div>
+
+<script>
+// ── Zone data ──────────────────────────────────────────────────
+const ZONES = [
+  {id:'America/New_York',     name:'New York',        sub:'Eastern Time',              code:'US', color:'#DBEAFE', tc:'#1E40AF', abbr:['est','edt','et','eastern']},
+  {id:'America/Los_Angeles',  name:'Los Angeles',     sub:'Pacific Time',              code:'US', color:'#DBEAFE', tc:'#1E40AF', abbr:['pst','pdt','pt','pacific']},
+  {id:'America/Chicago',      name:'Chicago',         sub:'Central Time',              code:'US', color:'#DBEAFE', tc:'#1E40AF', abbr:['cst','cdt','ct','central']},
+  {id:'America/Denver',       name:'Denver',          sub:'Mountain Time',             code:'US', color:'#DBEAFE', tc:'#1E40AF', abbr:['mst','mdt','mt','mountain']},
+  {id:'America/Toronto',      name:'Toronto',         sub:'Eastern Time',              code:'CA', color:'#FEE2E2', tc:'#991B1B', abbr:['est','edt','et','eastern']},
+  {id:'America/Vancouver',    name:'Vancouver',       sub:'Pacific Time',              code:'CA', color:'#FEE2E2', tc:'#991B1B', abbr:['pst','pdt','pt','pacific']},
+  {id:'America/Sao_Paulo',    name:'Sao Paulo',       sub:'Brasilia Time',             code:'BR', color:'#DCFCE7', tc:'#166534', abbr:['brt','brst','brasilia']},
+  {id:'America/Mexico_City',  name:'Mexico City',     sub:'Central Time',              code:'MX', color:'#FEF9C3', tc:'#854D0E', abbr:['cst','cdt','mxt','mexico']},
+  {id:'Europe/London',        name:'London',          sub:'GMT / BST',                 code:'GB', color:'#EDE9FE', tc:'#5B21B6', abbr:['gmt','bst','utc+0','utc+1']},
+  {id:'Europe/Paris',         name:'Paris',           sub:'Central European Time',     code:'FR', color:'#FCE7F3', tc:'#9D174D', abbr:['cet','cest','central european']},
+  {id:'Europe/Berlin',        name:'Berlin',          sub:'Central European Time',     code:'DE', color:'#FEE2E2', tc:'#991B1B', abbr:['cet','cest','central european']},
+  {id:'Europe/Moscow',        name:'Moscow',          sub:'Moscow Time',               code:'RU', color:'#FEE2E2', tc:'#991B1B', abbr:['msk','moscow']},
+  {id:'Europe/Istanbul',      name:'Istanbul',        sub:'Turkey Time',               code:'TR', color:'#FEF9C3', tc:'#854D0E', abbr:['trt','try','turkey']},
+  {id:'Europe/Amsterdam',     name:'Amsterdam',       sub:'Central European Time',     code:'NL', color:'#DBEAFE', tc:'#1E40AF', abbr:['cet','cest']},
+  {id:'Europe/Madrid',        name:'Madrid',          sub:'Central European Time',     code:'ES', color:'#FEF9C3', tc:'#854D0E', abbr:['cet','cest']},
+  {id:'Europe/Rome',          name:'Rome',            sub:'Central European Time',     code:'IT', color:'#DCFCE7', tc:'#166534', abbr:['cet','cest']},
+  {id:'Europe/Stockholm',     name:'Stockholm',       sub:'Central European Time',     code:'SE', color:'#EDE9FE', tc:'#5B21B6', abbr:['cet','cest']},
+  {id:'Africa/Cairo',         name:'Cairo',           sub:'Eastern European Time',     code:'EG', color:'#FEF9C3', tc:'#854D0E', abbr:['eet','eest','egypt']},
+  {id:'Africa/Johannesburg',  name:'Johannesburg',    sub:'South Africa Time',         code:'ZA', color:'#DCFCE7', tc:'#166534', abbr:['sast','south africa']},
+  {id:'Africa/Lagos',         name:'Lagos',           sub:'West Africa Time',          code:'NG', color:'#DCFCE7', tc:'#166534', abbr:['wat','west africa']},
+  {id:'Africa/Nairobi',       name:'Nairobi',         sub:'East Africa Time',          code:'KE', color:'#FEE2E2', tc:'#991B1B', abbr:['eat','east africa']},
+  {id:'Asia/Kolkata',         name:'Mumbai / Delhi',  sub:'India Standard Time',       code:'IN', color:'#FFF7ED', tc:'#9A3412', abbr:['ist','india','ist+5:30']},
+  {id:'Asia/Dubai',           name:'Dubai',           sub:'Gulf Standard Time',        code:'AE', color:'#FEF9C3', tc:'#854D0E', abbr:['gst','gulf','uae']},
+  {id:'Asia/Karachi',         name:'Karachi',         sub:'Pakistan Time',             code:'PK', color:'#DCFCE7', tc:'#166534', abbr:['pkt','pakistan']},
+  {id:'Asia/Dhaka',           name:'Dhaka',           sub:'Bangladesh Time',           code:'BD', color:'#FEE2E2', tc:'#991B1B', abbr:['bst','bdt','bangladesh']},
+  {id:'Asia/Bangkok',         name:'Bangkok',         sub:'Indochina Time',            code:'TH', color:'#FEF9C3', tc:'#854D0E', abbr:['ict','indochina','thailand']},
+  {id:'Asia/Singapore',       name:'Singapore',       sub:'Singapore Time',            code:'SG', color:'#FEE2E2', tc:'#991B1B', abbr:['sgt','sst','singapore']},
+  {id:'Asia/Hong_Kong',       name:'Hong Kong',       sub:'Hong Kong Time',            code:'HK', color:'#FEE2E2', tc:'#991B1B', abbr:['hkt','hong kong']},
+  {id:'Asia/Shanghai',        name:'Shanghai',        sub:'China Standard Time',       code:'CN', color:'#FEE2E2', tc:'#991B1B', abbr:['cst','chn','china']},
+  {id:'Asia/Seoul',           name:'Seoul',           sub:'Korea Standard Time',       code:'KR', color:'#DBEAFE', tc:'#1E40AF', abbr:['kst','korea']},
+  {id:'Asia/Tokyo',           name:'Tokyo',           sub:'Japan Standard Time',       code:'JP', color:'#FEE2E2', tc:'#991B1B', abbr:['jst','japan']},
+  {id:'Asia/Taipei',          name:'Taipei',          sub:'China Standard Time',       code:'TW', color:'#DBEAFE', tc:'#1E40AF', abbr:['cst','tst','taiwan']},
+  {id:'Asia/Jakarta',         name:'Jakarta',         sub:'Western Indonesia Time',    code:'ID', color:'#FEE2E2', tc:'#991B1B', abbr:['wib','indonesia']},
+  {id:'Asia/Riyadh',          name:'Riyadh',          sub:'Arabia Standard Time',      code:'SA', color:'#FEF9C3', tc:'#854D0E', abbr:['ast','arabia','saudi']},
+  {id:'Asia/Tehran',          name:'Tehran',          sub:'Iran Standard Time',        code:'IR', color:'#FEE2E2', tc:'#991B1B', abbr:['irst','idt','iran']},
+  {id:'Asia/Kathmandu',       name:'Kathmandu',       sub:'Nepal Time',                code:'NP', color:'#FFF7ED', tc:'#9A3412', abbr:['npt','nepal']},
+  {id:'Asia/Colombo',         name:'Colombo',         sub:'Sri Lanka Time',            code:'LK', color:'#FFF7ED', tc:'#9A3412', abbr:['slst','sri lanka']},
+  {id:'Asia/Yangon',          name:'Yangon',          sub:'Myanmar Time',              code:'MM', color:'#FEF9C3', tc:'#854D0E', abbr:['mmt','myanmar','mmst']},
+  {id:'Australia/Sydney',     name:'Sydney',          sub:'Australian Eastern Time',   code:'AU', color:'#DBEAFE', tc:'#1E40AF', abbr:['aest','aedt','aet']},
+  {id:'Australia/Melbourne',  name:'Melbourne',       sub:'Australian Eastern Time',   code:'AU', color:'#DBEAFE', tc:'#1E40AF', abbr:['aest','aedt','aet']},
+  {id:'Australia/Perth',      name:'Perth',           sub:'Australian Western Time',   code:'AU', color:'#DBEAFE', tc:'#1E40AF', abbr:['awst','awt']},
+  {id:'Pacific/Auckland',     name:'Auckland',        sub:'New Zealand Time',          code:'NZ', color:'#DCFCE7', tc:'#166534', abbr:['nzst','nzdt','new zealand']},
+  {id:'Pacific/Honolulu',     name:'Honolulu',        sub:'Hawaii Time',               code:'US', color:'#DBEAFE', tc:'#1E40AF', abbr:['hst','hdt','hawaii']},
+  {id:'UTC',                  name:'UTC',             sub:'Coordinated Universal Time',code:'UTC',color:'#F1F5F9', tc:'#475569', abbr:['utc','gmt','universal','zulu']},
+];
+
+const QUICK = ['Asia/Kolkata','America/New_York','Europe/London','Asia/Tokyo','UTC'];
+let active = ['Asia/Kolkata'];
+let fmt = 12;
+let refZone = 'Asia/Kolkata';
+
+// ── Helpers ──────────────────────────────────────────────────
+function getZone(id) {
+  return ZONES.find(z => z.id === id) || {id, name:id, sub:'', code:'?', color:'#F1F5F9', tc:'#475569'};
+}
+
+function getOffsetStr(tzId, date) {
+  try {
+    const f = new Intl.DateTimeFormat('en-GB', {timeZone: tzId, timeZoneName: 'shortOffset'});
+    const parts = f.formatToParts(date);
+    const off = parts.find(p => p.type === 'timeZoneName');
+    return off ? off.value.replace('GMT', 'UTC') : '';
+  } catch(e) { return ''; }
+}
+
+function formatTime(date, tzId, h) {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: tzId, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: h === 12
+    }).format(date);
+  } catch(e) { return '--:--:--'; }
+}
+
+function formatDate(date, tzId) {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: tzId, weekday: 'short', month: 'short', day: 'numeric'
+    }).format(date);
+  } catch(e) { return ''; }
+}
+
+function getOffsetMinutes(tzId, date) {
+  try {
+    const opts = {timeZone:'UTC', year:'numeric', month:'2-digit', day:'2-digit',
+                  hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false};
+    const utcStr = new Intl.DateTimeFormat('en-CA', opts).format(date);
+    const tzStr  = new Intl.DateTimeFormat('en-CA', {...opts, timeZone: tzId}).format(date);
+    function toMs(s) {
+      const m = s.match(/(\d+)-(\d+)-(\d+),?\s+(\d+):(\d+):(\d+)/);
+      return m ? Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]) : 0;
+    }
+    return (toMs(tzStr) - toMs(utcStr)) / 60000;
+  } catch(e) { return 0; }
+}
+
+function diffLabel(id1, id2, date) {
+  const d = getOffsetMinutes(id2, date) - getOffsetMinutes(id1, date);
+  if (d === 0) return 'same time';
+  const h = Math.floor(Math.abs(d) / 60), m = Math.abs(d) % 60;
+  const s = h + (m ? ':' + String(m).padStart(2,'0') : '') + 'h';
+  return d > 0 ? '+' + s + ' ahead' : '-' + s + ' behind';
+}
+
+// ── Render ──────────────────────────────────────────────────
+function renderZones() {
+  const list = document.getElementById('zonesList');
+  if (!active.length) {
+    list.innerHTML = '<div class="empty-state"><strong>No time zones added</strong>Use the search box above to add cities or time zones</div>';
+    return;
+  }
+  const now = new Date();
+  list.innerHTML = active.map(id => {
+    const z = getZone(id);
+    const t = formatTime(now, id, fmt);
+    const d = formatDate(now, id);
+    const off = getOffsetStr(id, now);
+    const isRef = id === refZone;
+
+    let diffHtml = '';
+    if (isRef) {
+      diffHtml = '<div class="zone-diff">reference</div>';
+    } else {
+      const raw = diffLabel(refZone, id, now);
+      const cls = raw.startsWith('+') ? 'ahead' : (raw === 'same time' ? '' : 'behind');
+      diffHtml = `<div class="zone-diff ${cls}">${raw}</div>`;
+    }
+
+    return `
+      <div class="zone-card${isRef ? ' reference' : ''}">
+        <div class="zone-badge" style="background:${z.color};color:${z.tc}">${z.code}</div>
+        <div class="zone-info">
+          <div class="zone-name">${z.name}</div>
+          <div class="zone-sub">${z.sub} &middot; ${off}</div>
+        </div>
+        <div class="zone-right">
+          <div class="zone-time">${t}</div>
+          <div class="zone-date">${d}</div>
+          ${diffHtml}
+        </div>
+        <button class="remove-btn" onclick="removeZone('${id}')" title="Remove">&times;</button>
+      </div>`;
+  }).join('');
+}
+
+function renderUTC() {
+  const t = formatTime(new Date(), 'UTC', 24);
+  document.getElementById('utcBadge').innerHTML = 'UTC &middot; ' + t;
+}
+
+function renderConv() {
+  const t = document.getElementById('convTime').value;
+  const from = document.getElementById('convFrom').value;
+  const res = document.getElementById('convResults');
+  if (!t || !from || active.length < 2) { res.innerHTML = ''; return; }
+  const [hh, mm] = t.split(':').map(Number);
+  const now = new Date();
+  const ref = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0));
+  const fromOff = getOffsetMinutes(from, now);
+  const baseUTC = new Date(ref.getTime() - fromOff * 60000);
+
+  const rows = active.filter(id => id !== from).map(id => {
+    const z = getZone(id);
+    const toOff = getOffsetMinutes(id, now);
+    const target = new Date(baseUTC.getTime() + toOff * 60000);
+    let th = target.getUTCHours();
+    const tm = String(target.getUTCMinutes()).padStart(2, '0');
+    let ap = '';
+    if (fmt === 12) {
+      ap = th < 12 ? ' AM' : ' PM';
+      th = th % 12 || 12;
+    }
+    return `<div class="conv-result-row">
+      <div class="conv-result-left">
+        <div class="zone-badge" style="background:${z.color};color:${z.tc};width:32px;height:20px;font-size:9px">${z.code}</div>
+        <span class="conv-result-name">${z.name}</span>
+      </div>
+      <span class="conv-result-time">${th}:${tm}${ap}</span>
+    </div>`;
+  });
+
+  res.innerHTML = rows.length ? rows.join('') : '<div style="font-size:13px;color:var(--text-secondary);padding:8px 0">Add more time zones to see conversions.</div>';
+}
+
+function tick() { renderZones(); renderUTC(); renderConv(); }
+
+function removeZone(id) {
+  active = active.filter(x => x !== id);
+  if (refZone === id && active.length) refZone = active[0];
+  rebuildFromSelect();
+  tick();
+}
+
+function addZone(id) {
+  if (!active.includes(id)) { active.push(id); rebuildFromSelect(); tick(); }
+}
+
+function setFmt(h) {
+  fmt = h;
+  document.getElementById('btn12').classList.toggle('active', h === 12);
+  document.getElementById('btn24').classList.toggle('active', h === 24);
+  tick();
+}
+
+// ── Quick chips ──────────────────────────────────────────────
+function renderQuickChips() {
+  const el = document.getElementById('quickChips');
+  el.innerHTML = QUICK.map(id => {
+    const z = getZone(id);
+    return `<button class="chip" onclick="addZone('${id}')">
+      <span class="chip-code" style="background:${z.color};color:${z.tc}">${z.code}</span>
+      ${z.name}
+    </button>`;
+  }).join('');
+}
+
+// ── Search ──────────────────────────────────────────────────
+function setupSearch() {
+  const inp = document.getElementById('searchInput');
+  const dd  = document.getElementById('dropdown');
+
+  inp.addEventListener('input', () => {
+    const q = inp.value.toLowerCase().trim();
+    if (!q) { dd.classList.remove('open'); return; }
+    const res = [];
+    for (const z of ZONES) {
+      const matchedAbbr = (z.abbr || []).find(a => a === q || a.startsWith(q));
+      const hits =
+        z.name.toLowerCase().includes(q) ||
+        z.sub.toLowerCase().includes(q)  ||
+        z.id.toLowerCase().includes(q)   ||
+        z.code.toLowerCase().includes(q) ||
+        !!matchedAbbr;
+      if (hits) res.push({ z, matchedAbbr: matchedAbbr || null });
+      if (res.length === 9) break;
+    }
+    if (!res.length) { dd.classList.remove('open'); return; }
+    dd.innerHTML = res.map(({ z, matchedAbbr }) => {
+      const abbrTag = matchedAbbr
+        ? `<span style="font-family:'DM Mono',monospace;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:${z.color};color:${z.tc};text-transform:uppercase;margin-left:6px;vertical-align:middle">${matchedAbbr.toUpperCase()}</span>`
+        : '';
+      return `<div class="dd-item" onclick="pickZone('${z.id}')">
+        <div class="dd-left">
+          <div class="dd-flag" style="background:${z.color};color:${z.tc}">${z.code}</div>
+          <div>
+            <span class="dd-name">${z.name}${abbrTag}</span>
+            <span class="dd-sub"> &middot; ${z.sub}</span>
+          </div>
+        </div>
+        <span class="dd-offset">${getOffsetStr(z.id, new Date())}</span>
+      </div>`;
+    }).join('');
+    dd.classList.add('open');
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.search-wrap')) dd.classList.remove('open');
+  });
+}
+
+function pickZone(id) {
+  addZone(id);
+  document.getElementById('searchInput').value = '';
+  document.getElementById('dropdown').classList.remove('open');
+}
+
+// ── Converter select ──────────────────────────────────────────
+function rebuildFromSelect() {
+  const sel = document.getElementById('convFrom');
+  const prev = sel.value;
+  sel.innerHTML = active.map(id => {
+    const z = getZone(id);
+    return `<option value="${id}">${z.code} - ${z.name}</option>`;
+  }).join('');
+  if (active.includes(prev)) sel.value = prev;
+}
+
+// ── Init ──────────────────────────────────────────────────────
+setupSearch();
+renderQuickChips();
+rebuildFromSelect();
+tick();
+setInterval(tick, 1000);
+
+document.getElementById('convTime').addEventListener('input', renderConv);
+document.getElementById('convFrom').addEventListener('change', renderConv);
+</script>
+</body>
+</html>
